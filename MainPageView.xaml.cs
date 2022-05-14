@@ -1,4 +1,4 @@
-﻿// <copyright file="MainPage.xaml.cs" company="TestCompany">
+﻿// <copyright file="MainPageView.xaml.cs" company="TestCompany">
 // Copyright (c) TestCompany. All rights reserved.
 // </copyright>
 
