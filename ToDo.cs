@@ -4,10 +4,12 @@
 
 namespace SimpleToDo
 {
+    using Realms;
+
     /// <summary>
     /// Represents one task in a to-do list.
     /// </summary>
-    internal class ToDo
+    internal class ToDo : RealmObject
     {
         /// <summary>
         /// Gets or sets the content of the to-do.

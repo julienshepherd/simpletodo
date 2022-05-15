@@ -8,7 +8,11 @@ namespace SimpleToDo
     using System.Collections.ObjectModel;
     using System.Threading.Tasks;
 
+    using Realms;
+
+    using Windows.ApplicationModel;
     using Windows.UI.Core;
+    using Windows.UI.Xaml;
     using Windows.UI.Xaml.Controls;
 
     /// <summary>
@@ -16,7 +20,27 @@ namespace SimpleToDo
     /// </summary>
     internal class MainPageViewModel : NotificationObject
     {
-        private readonly CoreDispatcher dispatcher;
+        private Realm realm;
+        private Transaction editTransaction;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MainPageViewModel"/> class.
+        /// </summary>
+        public MainPageViewModel()
+        {
+            Application.Current.EnteredBackground += (s, e) => this.SaveEdits();
+            Application.Current.LeavingBackground += (s, e) => this.EnsureEditTransaction();
+
+            this.realm = Realm.GetInstance();
+
+            foreach (var todo in this.realm.All<ToDo>())
+            {
+                this.ToDos.Add(todo);
+            }
+
+            this.editTransaction = this.realm.BeginWrite();
+        }
+
 
         /// <summary>
         /// Gets the collection of all to-dos ever added.
@@ -24,20 +48,14 @@ namespace SimpleToDo
         public ObservableCollection<ToDo> ToDos { get; } = new ObservableCollection<ToDo>();
 
         /// <summary>
-        /// Gets a value indicating whether there is at least one to-do in the list.
+        /// Gets a value indicating whether there there are no to-dos.
         /// </summary>
         public bool IsToDoListEmpty => this.ToDos.Count == 0;
 
-        public bool HasToDos => this.ToDos.Count > 0;
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="MainPageViewModel"/> class.
+        /// Gets a value indicating whether there is at least one to-do.
         /// </summary>
-        public MainPageViewModel()
-        {
-            // View model is constructed by the view, so we're in the UI thread, we can grab the dispatcher.
-            this.dispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
-        }
+        public bool HasToDos => this.ToDos.Count > 0;
 
         /// <summary>
         /// Shows a dialog prompting the user to add a new to-do.
@@ -47,7 +65,10 @@ namespace SimpleToDo
         {
             var dialog = new AddToDoDialog();
 
-            var result = await dialog.ShowAsync().AsTask().ConfigureAwait(false);
+            // Save any changes to the done state, prevent two transactions at the same time.
+            this.editTransaction.Commit();
+
+            var result = await dialog.ShowAsync();
 
             if (result is ContentDialogResult.Primary)
             {
@@ -56,17 +77,31 @@ namespace SimpleToDo
                     Details = dialog.ViewModel.ToDoText,
                 };
 
-                await dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => this.AddToDo(toDo))
-                    .AsTask().ConfigureAwait(false);
+                this.realm.Write(() =>
+                {
+                    this.realm.Add(toDo);
+                });
+
+                this.ToDos.Insert(0, toDo);
+
+                this.RaisePropertyChanged(nameof(this.HasToDos));
+                this.RaisePropertyChanged(nameof(this.IsToDoListEmpty));
+            }
+
+            // Start a new transaction to allow changes in the done state of to-dos.
+            this.editTransaction = this.realm.BeginWrite();
+        }
+        private void EnsureEditTransaction()
+        {
+            if (this.editTransaction is null)
+            {
+                this.editTransaction = this.realm.BeginWrite();
             }
         }
 
-        private void AddToDo(ToDo toDo)
+        private void SaveEdits()
         {
-            this.ToDos.Add(toDo);
-
-            this.RaisePropertyChanged(nameof(this.HasToDos));
-            this.RaisePropertyChanged(nameof(this.IsToDoListEmpty));
+            this.editTransaction.Commit();
         }
     }
 }
