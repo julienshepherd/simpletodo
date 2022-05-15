@@ -29,12 +29,23 @@
                 Style="{ThemeResource SubtitleTextBlockStyle}"
                 Text="My To-Dos" />
 
-            <AppBarButton
+            <StackPanel
                 Grid.Column="1"
                 HorizontalAlignment="Right"
-                Click="{x:Bind viewModel.ShowAddToDoDialogAsync}"
-                Icon="Add"
-                Label="Add" />
+                Orientation="Horizontal">
+                <AppBarButton
+                    Click="{x:Bind viewModel.RemoveDoneToDos}"
+                    Icon="Accept"
+                    Label="Clear done"
+                    ToolTipService.ToolTip="Remove all done to-dos" />
+
+                <AppBarButton
+                    Grid.Column="1"
+                    HorizontalAlignment="Right"
+                    Click="{x:Bind viewModel.ShowAddToDoDialogAsync}"
+                    Icon="Add"
+                    Label="Add" />
+            </StackPanel>
         </Grid>
 
         <StackPanel

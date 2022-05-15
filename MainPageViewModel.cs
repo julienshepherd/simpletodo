@@ -5,13 +5,13 @@
 namespace SimpleToDo
 {
     using System;
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.Linq;
     using System.Threading.Tasks;
 
     using Realms;
 
-    using Windows.ApplicationModel;
-    using Windows.UI.Core;
     using Windows.UI.Xaml;
     using Windows.UI.Xaml.Controls;
 
@@ -20,27 +20,28 @@ namespace SimpleToDo
     /// </summary>
     internal class MainPageViewModel : NotificationObject
     {
-        private Realm realm;
+        private readonly Realm realm;
         private Transaction editTransaction;
+        private IDisposable toDosNotificationToken;
+        private bool isAppInForeground;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MainPageViewModel"/> class.
         /// </summary>
         public MainPageViewModel()
         {
-            Application.Current.EnteredBackground += (s, e) => this.SaveEdits();
-            Application.Current.LeavingBackground += (s, e) => this.EnsureEditTransaction();
+            Application.Current.EnteredBackground += (s, e) => this.OnEnteredBackground();
+            Application.Current.LeavingBackground += (s, e) => this.OnLeavingBackground();
 
             this.realm = Realm.GetInstance();
 
             foreach (var todo in this.realm.All<ToDo>())
             {
-                this.ToDos.Add(todo);
+                this.ToDos.Insert(0, todo);
             }
 
-            this.editTransaction = this.realm.BeginWrite();
+            this.OnLeavingBackground();
         }
-
 
         /// <summary>
         /// Gets the collection of all to-dos ever added.
@@ -72,36 +73,98 @@ namespace SimpleToDo
 
             if (result is ContentDialogResult.Primary)
             {
-                var toDo = new ToDo()
-                {
-                    Details = dialog.ViewModel.ToDoText,
-                };
-
                 this.realm.Write(() =>
                 {
+                    var toDo = new ToDo()
+                    {
+                        Details = dialog.ViewModel.ToDoText,
+                    };
+
                     this.realm.Add(toDo);
                 });
-
-                this.ToDos.Insert(0, toDo);
-
-                this.RaisePropertyChanged(nameof(this.HasToDos));
-                this.RaisePropertyChanged(nameof(this.IsToDoListEmpty));
             }
 
             // Start a new transaction to allow changes in the done state of to-dos.
             this.editTransaction = this.realm.BeginWrite();
         }
-        private void EnsureEditTransaction()
+
+        /// <summary>
+        /// Removes all checked to-dos from storage.
+        /// </summary>
+        public void RemoveDoneToDos()
         {
-            if (this.editTransaction is null)
+            this.editTransaction.Commit();
+
+            var toDosToRemove = this.realm.All<ToDo>().Where(toDo => toDo.IsDone);
+            this.realm.Write(() =>
             {
-                this.editTransaction = this.realm.BeginWrite();
-            }
+                foreach (var toDo in toDosToRemove)
+                {
+                    this.realm.Remove(toDo);
+                }
+            });
+
+            this.editTransaction = this.realm.BeginWrite();
         }
 
         private void SaveEdits()
         {
             this.editTransaction.Commit();
+        }
+
+        private void OnEnteredBackground()
+        {
+            this.SaveEdits();
+            this.toDosNotificationToken.Dispose();
+            this.isAppInForeground = false;
+        }
+
+        private void OnLeavingBackground()
+        {
+            if (this.isAppInForeground)
+            {
+                return;
+            }
+
+            this.isAppInForeground = true;
+
+            this.editTransaction = this.realm.BeginWrite();
+
+            this.toDosNotificationToken = this.realm.All<ToDo>().SubscribeForNotifications(this.OnToDosChangedInStorage);
+        }
+
+        private void OnToDosChangedInStorage(IRealmCollection<ToDo> sender, ChangeSet changes, Exception error)
+        {
+            if (changes is null)
+            {
+                // First time notification
+                return;
+            }
+
+            if (changes.DeletedIndices.Any())
+            {
+                var toDosToRemove = new List<ToDo>();
+                var highestIndex = this.ToDos.Count - 1;
+
+                foreach (var deletedIndex in changes.DeletedIndices)
+                {
+                    var reversedIndex = highestIndex - deletedIndex;
+                    toDosToRemove.Add(this.ToDos.ElementAt(reversedIndex));
+                }
+
+                foreach (var toDoToRemove in toDosToRemove)
+                {
+                    this.ToDos.Remove(toDoToRemove);
+                }
+            }
+
+            foreach (var addedIndex in changes.InsertedIndices)
+            {
+                this.ToDos.Insert(0, sender.ElementAt(addedIndex));
+            }
+
+            this.RaisePropertyChanged(nameof(this.HasToDos));
+            this.RaisePropertyChanged(nameof(this.IsToDoListEmpty));
         }
     }
 }
