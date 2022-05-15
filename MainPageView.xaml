@@ -19,20 +19,35 @@
 
         <Grid HorizontalAlignment="Stretch" Background="{ThemeResource SystemChromeLowColor}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <TextBlock
                 Margin="12,0"
                 VerticalAlignment="Center"
                 Style="{ThemeResource SubtitleTextBlockStyle}"
-                Text="My To-Dos" />
+                Text="My To-Dos"
+                Visibility="{x:Bind viewModel.IsNotSearching, Mode=OneWay}" />
+
+            <TextBox
+                x:Name="SearchTextBox"
+                Margin="12,0"
+                VerticalAlignment="Center"
+                PlaceholderText="Search to-dos"
+                Text="{x:Bind viewModel.SearchFilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                Visibility="{x:Bind viewModel.IsSearching, Mode=OneWay}" />
 
             <StackPanel
                 Grid.Column="1"
                 HorizontalAlignment="Right"
                 Orientation="Horizontal">
+                <AppBarToggleButton
+                    x:Name="SearchToggleButton"
+                    Icon="Find"
+                    IsChecked="{x:Bind viewModel.IsSearching, Mode=TwoWay}"
+                    Label="Search" />
+
                 <AppBarButton
                     Click="{x:Bind viewModel.RemoveDoneToDos}"
                     Icon="Accept"

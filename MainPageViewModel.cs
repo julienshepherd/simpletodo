@@ -24,6 +24,9 @@ namespace SimpleToDo
         private Transaction editTransaction;
         private IDisposable toDosNotificationToken;
         private bool isAppInForeground;
+        private string searchFilterText;
+        private bool isSearching;
+        private ToDo[] toDosCache;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MainPageViewModel"/> class.
@@ -47,6 +50,52 @@ namespace SimpleToDo
         /// Gets the collection of all to-dos ever added.
         /// </summary>
         public ObservableCollection<ToDo> ToDos { get; } = new ObservableCollection<ToDo>();
+
+        /// <summary>
+        /// Gets or sets the fuzzy search text filter.
+        /// </summary>
+        public string SearchFilterText
+        {
+            get => this.searchFilterText;
+            set
+            {
+                if (this.SetProperty(ref this.searchFilterText, value))
+                {
+                    this.FilterToDos();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the user can filter the to-do list.
+        /// </summary>
+        public bool IsSearching
+        {
+            get => this.isSearching;
+            set
+            {
+                if (this.SetProperty(ref this.isSearching, value))
+                {
+                    this.RaisePropertyChanged(nameof(this.IsNotSearching));
+
+                    if (this.isSearching)
+                    {
+                        this.toDosCache = new ToDo[this.ToDos.Count];
+                        this.ToDos.CopyTo(this.toDosCache, 0);
+                    }
+                    else
+                    {
+                        this.SearchFilterText = string.Empty;
+                        this.toDosCache = null;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the user is unable to filter the to-do list.
+        /// </summary>
+        public bool IsNotSearching => !this.IsSearching;
 
         /// <summary>
         /// Gets a value indicating whether there there are no to-dos.
@@ -165,6 +214,44 @@ namespace SimpleToDo
 
             this.RaisePropertyChanged(nameof(this.HasToDos));
             this.RaisePropertyChanged(nameof(this.IsToDoListEmpty));
+        }
+
+        private void FilterToDos()
+        {
+            var searchFilters = this.searchFilterText.Trim().Split(' ').ToList();
+            searchFilters.ForEach(entry => entry.Trim());
+            var toDosToShow = new Collection<ToDo>();
+            foreach (var toDo in this.toDosCache)
+            {
+                foreach (var searchFilter in searchFilters)
+                {
+                    if (toDo.Details.Contains(searchFilter))
+                    {
+                        toDosToShow.Add(toDo);
+                        break;
+                    }
+                }
+            }
+
+            var toDosToHide = this.toDosCache.Except(toDosToShow);
+            foreach (var toDoToRemove in toDosToHide)
+            {
+                this.ToDos.Remove(toDoToRemove);
+            }
+
+            var newToDoToShowIndex = 0;
+            foreach (var toDoToShow in toDosToShow)
+            {
+                if (this.ToDos.Contains(toDoToShow))
+                {
+                    newToDoToShowIndex = this.ToDos.IndexOf(toDoToShow) + 1;
+                }
+                else
+                {
+                    this.ToDos.Insert(newToDoToShowIndex, toDoToShow);
+                    newToDoToShowIndex++;
+                }
+            }
         }
     }
 }

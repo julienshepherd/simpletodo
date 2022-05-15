@@ -4,6 +4,10 @@
 
 namespace SimpleToDo
 {
+    using System;
+    using System.ComponentModel;
+    using System.Threading.Tasks;
+
     using Windows.UI.Xaml.Controls;
 
     /// <summary>
@@ -17,6 +21,19 @@ namespace SimpleToDo
         public MainPage()
         {
             this.InitializeComponent();
+
+            this.viewModel.PropertyChanged += this.OnViewModelPropertyChanged;
+        }
+
+        private async void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(MainPageViewModel.IsSearching))
+            {
+                // Delay necessary for the UI thread to pick up the Focus call.
+                await Task.Delay(10);
+
+                this.SearchTextBox.Focus(Windows.UI.Xaml.FocusState.Programmatic);
+            }
         }
     }
 }

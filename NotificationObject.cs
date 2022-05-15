@@ -4,7 +4,9 @@
 
 namespace SimpleToDo
 {
+    using System.Collections.Generic;
     using System.ComponentModel;
+    using System.Runtime.CompilerServices;
 
     /// <summary>
     /// Provides property change notifications.
@@ -15,6 +17,18 @@ namespace SimpleToDo
         /// Invoked after a property has changed its value;
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
+
+        protected bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = "")
+        {
+            if (!object.Equals(storage, value))
+            {
+                storage = value;
+                this.RaisePropertyChanged(propertyName);
+                return true;
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// Raises the <see cref="PropertyChanged"/> event for the given <paramref name="propertyName"/>.
