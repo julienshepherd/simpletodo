@@ -20,10 +20,7 @@ namespace SimpleToDo
         /// <returns>The asynchronous operation.</returns>
         public async Task ShowAddToDoDialogAsync()
         {
-            var dialog = new ContentDialog()
-            {
-                CloseButtonText = "Add",
-            };
+            var dialog = new AddToDoDialog();
 
             await dialog.ShowAsync().AsTask().ConfigureAwait(false);
         }

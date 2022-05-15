@@ -1,0 +1,19 @@
+﻿<ContentDialog
+    x:Class="SimpleToDo.AddToDoDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SimpleToDo"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="New To-Do"
+    PrimaryButtonText="Add"
+    CloseButtonText="Cancel">
+    <ContentDialog.DataContext>
+        <local:AddToDoDialogViewModel x:Name="viewModel"/>
+    </ContentDialog.DataContext>
+
+    <Grid VerticalAlignment="Top">
+        <TextBox Text="{x:Bind viewModel.ToDoText, Mode=TwoWay}" TextWrapping="Wrap"/>
+    </Grid>
+</ContentDialog>
