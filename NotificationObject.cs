@@ -18,6 +18,14 @@ namespace SimpleToDo
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
+        /// <summary>
+        /// Sets the value of a property and fires <see cref="PropertyChanged"/> if the value is different than the existing one.
+        /// </summary>
+        /// <typeparam name="T">The type of the property value to set.</typeparam>
+        /// <param name="storage">The existing value of the property.</param>
+        /// <param name="value">The new value of the property.</param>
+        /// <param name="propertyName">The name of the property to set.</param>
+        /// <returns><c>True</c> if the property has been changed; otherwise <c>false</c>.</returns>
         protected bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = "")
         {
             if (!object.Equals(storage, value))
